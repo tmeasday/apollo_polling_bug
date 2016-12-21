@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
-import Foo from './Foo';
+import Foo, { QUERY } from './Foo';
 
 import ApolloClient from 'apollo-client'
 import { ApolloProvider } from 'react-apollo'
@@ -26,13 +26,33 @@ class MockNetworkInterface {
 const networkInterface = new MockNetworkInterface()
 const client = new ApolloClient({ networkInterface })
 
-const render = (attrs) => {
-  ReactDOM.render(
-    <ApolloProvider client={client}>
-      <Foo {...attrs} />
-    </ApolloProvider>,
-    document.getElementById('root')
-  );
+let observableQuery;
+let subscription;
+const render = ({ fooID, active, message }) => {
+  if (!active) {
+    if (subscription) {
+      subscription.unsubscribe();
+    }
+  } else {
+    const options = {
+      forceFetch: true,
+      variables: { fooID },
+      pollInterval: 2000,
+    };
+    console.log(options)
+
+    if (observableQuery) {
+      observableQuery.setOptions(options);
+    } else {
+      observableQuery = client.watchQuery({ query: QUERY, ...options });
+      subscription = observableQuery.subscribe({
+        next(data) {
+          console.log({ data });
+        }
+      });
+    }
+  }
+  console.log(message)
 }
 
 render({
